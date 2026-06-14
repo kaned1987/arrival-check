@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>ArrivalCheck — คณะวิศวกรรมศาสตร์ มมส.</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --maroon: #5C0011;
+    --maroon-light: #8B1A1A;
+    --maroon-50: #FBEAEA;
+    --bg: #F5F1EC;
+    --text: #2C2C2A;
+    --muted: #6B6B66;
+    --border: #D8D2C9;
+    --success: #0F6E56;
+    --success-bg: #E1F5EE;
+    --danger: #A32D2D;
+    --danger-bg: #FCEBEB;
+    --warn-bg: #FAEEDA;
+    --warn: #854F0B;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; font-family: 'Sarabun', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 16px; }
+  .header { background: var(--maroon); color: #fff; padding: 18px; border-radius: 12px; text-align: center; margin-bottom: 16px; }
+  .header .sub { font-size: 13px; opacity: 0.85; }
+  .header .title { font-size: 20px; font-weight: 600; margin-top: 4px; }
+  .card { background: #fff; border-radius: 12px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 14px; }
+  label { display: block; font-size: 14px; font-weight: 500; color: var(--muted); margin-bottom: 6px; margin-top: 12px; }
+  label:first-child { margin-top: 0; }
+  label .num { display: inline-block; background: var(--maroon); color: #fff; width: 22px; height: 22px; border-radius: 50%; text-align: center; line-height: 22px; font-size: 13px; margin-right: 6px; }
+  select, input { width: 100%; padding: 12px; font-size: 16px; font-family: inherit; border: 1.5px solid var(--border); border-radius: 8px; background: #fff; color: var(--text); }
+  select:focus, input:focus { outline: none; border-color: var(--maroon); }
+  input[type=password] { letter-spacing: 6px; text-align: center; font-size: 22px; }
+  .btn { width: 100%; padding: 14px; font-size: 17px; font-weight: 600; font-family: inherit; background: var(--maroon); color: #fff; border: none; border-radius: 8px; cursor: pointer; margin-top: 16px; }
+  .btn:active { background: var(--maroon-light); }
+  .btn:disabled { background: #B4B2A9; cursor: not-allowed; }
+  .msg { padding: 14px; border-radius: 8px; margin-bottom: 14px; font-size: 15px; line-height: 1.5; }
+  .msg.success { background: var(--success-bg); color: var(--success); border-left: 4px solid var(--success); }
+  .msg.error   { background: var(--danger-bg); color: var(--danger); border-left: 4px solid var(--danger); }
+  .msg.warn    { background: var(--warn-bg); color: var(--warn); border-left: 4px solid var(--warn); }
+  .msg .big { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+  .loading { text-align: center; color: var(--muted); padding: 30px 0; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .filter-result { max-height: 220px; overflow-y: auto; background: #fff; border: 1.5px solid var(--border); border-radius: 8px; margin-top: -1px; }
+  .filter-result .item { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f0ede8; font-size: 15px; }
+  .filter-result .item:last-child { border-bottom: none; }
+  .filter-result .item:active { background: var(--maroon-50); }
+  .filter-result .item .branch { font-size: 12px; color: var(--muted); }
+  .selected-name { background: var(--maroon-50); padding: 12px; border-radius: 8px; border-left: 4px solid var(--maroon); }
+  .selected-name .n { font-weight: 600; font-size: 16px; color: var(--maroon); }
+  .selected-name .b { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .change-btn { background: none; border: none; color: var(--maroon); font-size: 13px; text-decoration: underline; cursor: pointer; padding: 4px 0 0; font-family: inherit; }
+  .footer { text-align: center; font-size: 11px; color: var(--muted); margin-top: 20px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="sub">ArrivalCheck · ระบบเช็คชื่อ</div>
+    <div class="title">คณะวิศวกรรมศาสตร์ มมส.</div>
+  </div>
+
+  <div id="msgBox"></div>
+
+  <div id="loadingBox" class="card loading">กำลังโหลดรายชื่อ...</div>
+
+  <div id="formBox" class="card" style="display:none;">
+
+    <label><span class="num">1</span>เลือกครั้งที่เช็คชื่อ</label>
+    <select id="roundSel"></select>
+    <div class="hint">ผู้ดูแลจะแจ้งตัวเลขให้ทราบ ณ จุดเช็คชื่อ</div>
+
+    <label><span class="num">2</span>ค้นหาและเลือกชื่อตนเอง</label>
+    <div id="nameSection">
+      <input type="text" id="searchInput" placeholder="พิมพ์ชื่อหรือนามสกุล..." autocomplete="off" />
+      <div id="filterResult" class="filter-result" style="display:none;"></div>
+    </div>
+    <div id="selectedBox" class="selected-name" style="display:none;">
+      <div class="n" id="selName"></div>
+      <div class="b" id="selBranch"></div>
+      <button class="change-btn" onclick="clearSelection()">เปลี่ยนชื่อ</button>
+    </div>
+
+    <label><span class="num">3</span>รหัส 4 หลักท้ายเบอร์โทร</label>
+    <input type="password" id="pinInput" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="••••" />
+    <div class="hint">เช่น เบอร์ 081-234-5678 ให้กรอก 5678</div>
+
+    <button class="btn" id="submitBtn" onclick="submit()">✓ ยืนยันการเช็คชื่อ</button>
+  </div>
+
+  <div class="footer">ผศ.ดร.คเณศ ถุงออด — คณะวิศวกรรมศาสตร์ มมส.</div>
+</div>
+
+<script src="config.js"></script>
+<script>
+let roster = [];
+let selectedId = null;
+
+// โหลด roster
+async function loadRoster() {
+  try {
+    const res = await fetch(GAS_URL + '?action=roster');
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'load failed');
+    roster = data.roster;
+
+    // populate round dropdown
+    const sel = document.getElementById('roundSel');
+    for (let i = 1; i <= MAX_ROUND; i++) {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = 'ครั้งที่ ' + i;
+      sel.appendChild(opt);
+    }
+
+    document.getElementById('loadingBox').style.display = 'none';
+    document.getElementById('formBox').style.display = 'block';
+  } catch (err) {
+    document.getElementById('loadingBox').innerHTML =
+      '<div style="color:#A32D2D;">โหลดรายชื่อไม่สำเร็จ<br>ลองรีเฟรชหน้านี้อีกครั้ง</div>';
+  }
+}
+
+// ค้นหา
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('searchInput');
+  input.addEventListener('input', onSearch);
+  input.addEventListener('focus', onSearch);
+});
+
+function onSearch() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const box = document.getElementById('filterResult');
+  if (!q) { box.style.display = 'none'; return; }
+  const matched = roster.filter(r =>
+    r.name.toLowerCase().includes(q) || r.branch.toLowerCase().includes(q)
+  ).slice(0, 15);
+  if (matched.length === 0) {
+    box.innerHTML = '<div class="item" style="color:#A32D2D;">ไม่พบชื่อนี้</div>';
+  } else {
+    box.innerHTML = matched.map(r =>
+      `<div class="item" onclick="pickName('${r.id}')">
+         <div>${escapeHtml(r.name)}</div>
+         <div class="branch">${escapeHtml(r.branch)}</div>
+       </div>`
+    ).join('');
+  }
+  box.style.display = 'block';
+}
+
+function pickName(id) {
+  const r = roster.find(x => x.id === id);
+  if (!r) return;
+  selectedId = id;
+  document.getElementById('selName').textContent = r.name;
+  document.getElementById('selBranch').textContent = r.branch;
+  document.getElementById('nameSection').style.display = 'none';
+  document.getElementById('selectedBox').style.display = 'block';
+  document.getElementById('filterResult').style.display = 'none';
+  document.getElementById('pinInput').focus();
+}
+
+function clearSelection() {
+  selectedId = null;
+  document.getElementById('selectedBox').style.display = 'none';
+  document.getElementById('nameSection').style.display = 'block';
+  document.getElementById('searchInput').value = '';
+  document.getElementById('searchInput').focus();
+}
+
+async function submit() {
+  const round = parseInt(document.getElementById('roundSel').value, 10);
+  const pin4 = document.getElementById('pinInput').value.trim();
+  const btn = document.getElementById('submitBtn');
+
+  if (!selectedId) return showMsg('error', 'กรุณาเลือกชื่อตนเอง');
+  if (!/^\d{4}$/.test(pin4)) return showMsg('error', 'กรุณากรอกรหัส 4 หลัก (ตัวเลขเท่านั้น)');
+
+  btn.disabled = true;
+  btn.textContent = 'กำลังบันทึก...';
+  clearMsg();
+
+  try {
+    // ใช้ text/plain หลีกเลี่ยง CORS preflight
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ id: selectedId, pin4: pin4, round: round })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showSuccessScreen(data);
+    } else if (data.duplicate) {
+      showMsg('warn', '<div class="big">⚠ เช็คชื่อแล้ว</div>' + escapeHtml(data.error));
+    } else {
+      showMsg('error', escapeHtml(data.error || 'บันทึกไม่สำเร็จ'));
+    }
+  } catch (err) {
+    showMsg('error', 'เชื่อมต่อไม่สำเร็จ — ลองอีกครั้ง');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✓ ยืนยันการเช็คชื่อ';
+  }
+}
+
+function showSuccessScreen(data) {
+  document.getElementById('formBox').style.display = 'none';
+  clearMsg();
+  const html = `
+    <div class="card" style="text-align:center; padding: 32px 20px;">
+      <div style="font-size: 64px; color: var(--success); line-height: 1;">✓</div>
+      <div style="font-size: 22px; font-weight: 700; color: var(--success); margin: 12px 0 6px;">บันทึกสำเร็จ</div>
+      <div style="font-size: 18px; font-weight: 500; margin-bottom: 4px;">${escapeHtml(data.name)}</div>
+      <div style="color: var(--muted); margin-bottom: 20px;">
+        เช็คชื่อครั้งที่ <b>${data.round}</b><br>
+        เวลา <b>${data.time}</b>
+      </div>
+      <button class="btn" onclick="resetForm()" style="margin-top:0;">← กลับหน้าแรก</button>
+    </div>`;
+  document.getElementById('msgBox').innerHTML = html;
+  window.scrollTo(0, 0);
+}
+
+function resetForm() {
+  clearMsg();
+  clearSelection();
+  document.getElementById('pinInput').value = '';
+  document.getElementById('formBox').style.display = 'block';
+  window.scrollTo(0, 0);
+}
+
+function showMsg(type, html) {
+  document.getElementById('msgBox').innerHTML = '<div class="msg ' + type + '">' + html + '</div>';
+}
+function clearMsg() { document.getElementById('msgBox').innerHTML = ''; }
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+loadRoster();
+</script>
+</body>
+</html>

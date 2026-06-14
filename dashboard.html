@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ArrivalCheck — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --maroon: #5C0011;
+    --maroon-light: #8B1A1A;
+    --maroon-50: #FBEAEA;
+    --bg: #F5F1EC;
+    --text: #2C2C2A;
+    --muted: #6B6B66;
+    --border: #D8D2C9;
+    --success: #0F6E56;
+    --success-bg: #E1F5EE;
+    --danger: #A32D2D;
+    --danger-bg: #FCEBEB;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; font-family: 'Sarabun', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 16px; }
+  .header { background: var(--maroon); color: #fff; padding: 16px 20px; border-radius: 12px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+  .header .title { font-size: 18px; font-weight: 600; }
+  .header .sub { font-size: 12px; opacity: 0.85; }
+  .controls { background: #fff; padding: 14px; border-radius: 12px; margin-bottom: 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .controls label { font-size: 14px; font-weight: 500; color: var(--muted); }
+  select { padding: 10px 12px; font-size: 15px; font-family: inherit; border: 1.5px solid var(--border); border-radius: 8px; background: #fff; color: var(--text); min-width: 130px; }
+  select:focus { outline: none; border-color: var(--maroon); }
+  .btn { padding: 10px 16px; font-size: 14px; font-weight: 500; font-family: inherit; background: var(--maroon); color: #fff; border: none; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .btn:active { background: var(--maroon-light); }
+  .btn.ghost { background: #fff; color: var(--maroon); border: 1.5px solid var(--maroon); }
+  .auto-toggle { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; margin-left: auto; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; }
+  .stat { background: #fff; padding: 16px; border-radius: 12px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .stat .label { font-size: 13px; color: var(--muted); }
+  .stat .num { font-size: 32px; font-weight: 700; margin-top: 4px; }
+  .stat.total .num { color: var(--text); }
+  .stat.in    { background: var(--success-bg); }
+  .stat.in .label, .stat.in .num { color: var(--success); }
+  .stat.out   { background: var(--danger-bg); }
+  .stat.out .label, .stat.out .num { color: var(--danger); }
+  .table-wrap { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { background: var(--maroon); color: #fff; padding: 12px 10px; text-align: left; font-weight: 500; font-size: 13px; position: sticky; top: 0; }
+  td { padding: 10px; border-bottom: 1px solid #f0ede8; }
+  tr.checked    { background: #fff; }
+  tr.unchecked  { background: #FFFAFA; }
+  tr.unchecked td { font-weight: 500; }
+  .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .badge.in  { background: var(--success-bg); color: var(--success); }
+  .badge.out { background: var(--danger-bg); color: var(--danger); }
+  .last-update { font-size: 12px; color: var(--muted); }
+  .phone { font-family: 'Sarabun', monospace; color: var(--maroon); font-weight: 500; }
+  .phone a { display: inline-block; padding: 4px 8px; border-radius: 6px; transition: background 0.15s; }
+  .phone a:hover { background: var(--maroon-50); }
+  .loading { text-align: center; padding: 40px; color: var(--muted); }
+  @media (max-width: 640px) {
+    .stat .num { font-size: 24px; }
+    th, td { padding: 8px 6px; font-size: 13px; }
+    .controls { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div>
+      <div class="sub">ArrivalCheck · Dashboard</div>
+      <div class="title">ระบบเช็คชื่อ — คณะวิศวกรรมศาสตร์ มมส.</div>
+    </div>
+    <div class="last-update" id="lastUpdate">—</div>
+  </div>
+
+  <div class="controls">
+    <label>ครั้งที่:</label>
+    <select id="roundSel" onchange="loadData()"></select>
+    <button class="btn" onclick="loadData()">🔄 รีเฟรช</button>
+    <button class="btn ghost" onclick="exportCSV()">⬇ Export CSV</button>
+    <label class="auto-toggle">
+      <input type="checkbox" id="autoRefresh" checked> auto-refresh 15s
+    </label>
+  </div>
+
+  <div class="stats">
+    <div class="stat total"><div class="label">ทั้งหมด</div><div class="num" id="statTotal">—</div></div>
+    <div class="stat in"><div class="label">เช็คชื่อแล้ว</div><div class="num" id="statIn">—</div></div>
+    <div class="stat out"><div class="label">ยังไม่เช็ค</div><div class="num" id="statOut">—</div></div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:90px;">สถานะ</th>
+          <th>ชื่อ-สกุล</th>
+          <th>สาขาวิชา</th>
+          <th>เบอร์โทร</th>
+          <th style="width:90px;">เวลาเช็คชื่อ</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr><td colspan="5" class="loading">กำลังโหลด...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<script src="config.js"></script>
+<script>
+let currentRows = [];
+let autoTimer = null;
+
+// init dropdown
+function initDropdown() {
+  const sel = document.getElementById('roundSel');
+  for (let i = 1; i <= MAX_ROUND; i++) {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = 'ครั้งที่ ' + i;
+    sel.appendChild(opt);
+  }
+}
+
+async function loadData() {
+  const round = parseInt(document.getElementById('roundSel').value, 10);
+  try {
+    const res = await fetch(GAS_URL + '?action=dashboard&round=' + round + '&_=' + Date.now());
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'failed');
+    currentRows = data.rows;
+    render();
+    const now = new Date();
+    document.getElementById('lastUpdate').textContent =
+      'อัปเดตล่าสุด ' + now.toLocaleTimeString('th-TH');
+  } catch (err) {
+    document.getElementById('tbody').innerHTML =
+      '<tr><td colspan="5" class="loading" style="color:#A32D2D;">โหลดข้อมูลไม่สำเร็จ</td></tr>';
+  }
+}
+
+function render() {
+  const total = currentRows.length;
+  const inCount = currentRows.filter(r => r.checked).length;
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statIn').textContent = inCount;
+  document.getElementById('statOut').textContent = total - inCount;
+
+  // เรียง: ยังไม่ขึ้นบนสุด แล้วเรียงตาม id; ขึ้นแล้วเรียงตามเวลา
+  const sorted = [...currentRows].sort((a, b) => {
+    if (a.checked !== b.checked) return a.checked ? 1 : -1;
+    if (a.checked) return a.time.localeCompare(b.time);
+    return a.id.localeCompare(b.id);
+  });
+
+  const tbody = document.getElementById('tbody');
+  if (total === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="loading">ไม่มีข้อมูล</td></tr>';
+    return;
+  }
+  tbody.innerHTML = sorted.map(r => `
+    <tr class="${r.checked ? 'checked' : 'unchecked'}">
+      <td><span class="badge ${r.checked ? 'in' : 'out'}">${r.checked ? '✓ เช็คแล้ว' : '✗ ยังไม่เช็ค'}</span></td>
+      <td>${escapeHtml(r.name)}</td>
+      <td>${escapeHtml(r.branch)}</td>
+      <td class="phone"><a href="tel:${normalizePhone(r.phone)}" style="color:inherit;text-decoration:none;">📞 ${formatPhone(r.phone)}</a></td>
+      <td>${escapeHtml(r.time || '—')}</td>
+    </tr>
+  `).join('');
+}
+
+// คืนเบอร์ 10 หลักโดยมี 0 นำหน้าเสมอ (กันกรณี Sheet เก็บเป็น number แล้วศูนย์หาย)
+function normalizePhone(p) {
+  let s = String(p).replace(/\D/g, '');
+  if (s.length === 9 && !s.startsWith('0')) s = '0' + s;
+  return s;
+}
+
+function formatPhone(p) {
+  const s = normalizePhone(p);
+  if (s.length === 10) return s.slice(0,3) + '-' + s.slice(3,6) + '-' + s.slice(6);
+  return s;
+}
+
+function exportCSV() {
+  if (currentRows.length === 0) return alert('ไม่มีข้อมูลให้ export');
+  const round = document.getElementById('roundSel').value;
+  const head = ['สถานะ', 'ชื่อ-สกุล', 'สาขา', 'เบอร์โทร', 'เวลาเช็คชื่อ'];
+  const rows = currentRows.map(r => [
+    r.checked ? 'เช็คแล้ว' : 'ยังไม่เช็ค',
+    r.name, r.branch, normalizePhone(r.phone), r.time || ''
+  ]);
+  const csv = [head, ...rows].map(row =>
+    row.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')
+  ).join('\n');
+  // BOM สำหรับ Excel เปิดภาษาไทยไม่เพี้ยน
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const now = new Date();
+  const ts = now.getFullYear() + ('0'+(now.getMonth()+1)).slice(-2) + ('0'+now.getDate()).slice(-2)
+           + '_' + ('0'+now.getHours()).slice(-2) + ('0'+now.getMinutes()).slice(-2);
+  a.download = `ArrivalCheck_round${round}_${ts}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function setupAutoRefresh() {
+  const cb = document.getElementById('autoRefresh');
+  cb.addEventListener('change', () => {
+    if (cb.checked) startAuto(); else stopAuto();
+  });
+  startAuto();
+}
+function startAuto() {
+  stopAuto();
+  autoTimer = setInterval(() => {
+    if (document.getElementById('autoRefresh').checked) loadData();
+  }, 15000);
+}
+function stopAuto() { if (autoTimer) { clearInterval(autoTimer); autoTimer = null; } }
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+initDropdown();
+loadData();
+setupAutoRefresh();
+</script>
+</body>
+</html>
